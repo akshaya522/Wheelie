@@ -1,0 +1,7 @@
+<resources>
+    <string name="google_map_API_key">AIzaSyBN1mVJMDK3RclC1teG3BkL4It0oeUgnUI</string>
+
+    <string name="app_name">GoogleMapTest</string>
+
+    <string name="Map_button">Map</string>
+</resources>
