@@ -3,10 +3,12 @@ package com.example.nguyendinhledan.googlemaptest;
 import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Location;
 import android.nfc.Tag;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
@@ -23,6 +25,9 @@ import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.Circle;
+import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.MarkerOptions;
@@ -55,7 +60,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     private static final String TAG = "MapActivity";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
-    private static final float DEFAULT_ZOOM = 12f;
+    private static final float DEFAULT_ZOOM = 15f;
 
     private HashMap<String, Integer> carparkSlots;
     @Override
@@ -150,7 +155,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         Log.d(TAG, "onMapReady: Map is ready");
         Toast.makeText(this, "Map is ready!", Toast.LENGTH_SHORT).show();
         mMap = googleMap;
-
+        /*
         if (mLocationPermissionGranted) {
             getDeviceLocation();
 
@@ -158,8 +163,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 return;
             }
             mMap.setMyLocationEnabled(true);
-        }
-        new MarkerTaskClass().execute();
+        }*/
+        new CarparkSlotsTask().execute("https://api.data.gov.sg/v1/transport/carpark-availability");
 
 
     }
@@ -199,7 +204,6 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            new JsonTaskClass().execute("https://api.data.gov.sg/v1/transport/carpark-availability");
             pd = new ProgressDialog(MapActivity.this);
             pd.setCancelable(true);
             pd.setMessage("Wait");
@@ -209,27 +213,48 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
         @Override
         protected void onPostExecute(JSONArray carparks) {
             super.onPostExecute(carparks);
+            mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(MapActivity.this));
             Log.d(TAG, "onPostExecute: creating markers");
-            Log.d(TAG, "onPostExecute: " + carparkSlots.get("HE12"));
-            for (int i=0; i<carparks.length(); i++ ) {
-                try {
-                    JSONObject carpark = carparks.getJSONObject(i);
-                    Log.d(TAG, "onPostExecute: " + carpark.getString("car_park_no"));
+            Bundle extras = getIntent().getExtras();
+            Log.d(TAG, "onPostExecute: creating event marker");
+            mMap.addMarker(new MarkerOptions()
+                            .position(new LatLng(extras.getDouble("event_lat"), extras.getDouble("event_lng")))
+                            .title(extras.getString("event_name"))
+                            .snippet(extras.getString("event_address"))
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
+            Log.d(TAG, "onPostExecute: creating carpark marker");
+            for (int i=0; i<extras.getInt("event_number_of_carpark"); i++){
+                if (!extras.getString("event_carpark_type"+i).equals("HDB") || carparkSlots.get(extras.getString("event_carpark_name"+i)) == null){
                     mMap.addMarker(new MarkerOptions()
-                            .position(new LatLng(carpark.getDouble("lat"), carpark.getDouble("lon")))
-                            .title("Address: " + carpark.getString("address")).snippet("Slots "
-                                    + carparkSlots.get(carpark.getString("car_park_no"))));
-                    } catch (JSONException e){
-                    e.printStackTrace();
+                            .position(new LatLng(extras.getDouble("event_carpark_lat"+i), extras.getDouble("event_carpark_lng"+i)))
+                            .title("Carpark: " + extras.getString("event_carpark_name"+i))
+                            .snippet("Address: " + extras.getString("event_carpark_address"+i)+ "\n" +
+                                    extras.getString("event_carpark_rates"+i) +"\n"+
+                                    "Slots: Not available"));
+
+                }
+                else {
+                    mMap.addMarker(new MarkerOptions()
+                            .position(new LatLng(extras.getDouble("event_carpark_lat" + i), extras.getDouble("event_carpark_lng" + i)))
+                            .title("Carpark: " + extras.getString("event_carpark_name"+i))
+                            .snippet("Address: " + extras.getString("event_carpark_address"+i) +"\n"+
+                                    extras.getString("event_carpark_rates"+i) +"\n"+
+                                    "Slots: " + carparkSlots.get(extras.getString("event_carpark_name"+i))));
                 }
             }
+            Circle circle = mMap.addCircle(new CircleOptions()
+                    .center(new LatLng(extras.getDouble("event_lat"), extras.getDouble("event_lng")))
+                    .radius(PreferenceManager.getDefaultSharedPreferences(MapActivity.this).getInt(getResources().getString(R.string.radius_preference), 500))
+                    .strokeColor(Color.BLUE)
+                    .strokeWidth(2f));
+            moveCamera(new LatLng(extras.getDouble("event_lat"), extras.getDouble("event_lng")), DEFAULT_ZOOM);
             if (pd.isShowing()){
                 pd.dismiss();
             }
         }
     }
 
-    private class  JsonTaskClass extends AsyncTask<String, String, HashMap<String, Integer>> {
+    private class CarparkSlotsTask extends AsyncTask<String, String, HashMap<String, Integer>> {
 
         private static final String TAG = "JsonTaskClass";
 
@@ -244,7 +269,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             super.onPostExecute(result);
             try {
                 carparkSlots = result;
-                Log.d(TAG, "onPostExecute: " + carparkSlots.get("HE12"));
+                Log.d(TAG, "onPostExecute: passed result carpark slots");
+                Log.d(TAG, "onPostExecute: calling marker task");
+                new MarkerTaskClass().execute();
             } catch (NullPointerException e){
                 Log.d(TAG, "onPostExecute: null pointer");
             }
