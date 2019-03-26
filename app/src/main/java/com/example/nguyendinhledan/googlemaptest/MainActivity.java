@@ -37,6 +37,8 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -44,12 +46,12 @@ import java.util.Iterator;
 public class MainActivity extends AppCompatActivity {
 
     private ProgressDialog pd;
-    private ArrayList<Event> eventList = new ArrayList<Event>();
+    private ArrayList<Event> eventList = new ArrayList<>();
     private HashMap<String, Integer> carparkSlots;
 
     private JSONArray carparkLocations;
 
-    private HashMap<String, LatLng> carparkLocationsByName = new HashMap<String, LatLng>();
+    private HashMap<String, LatLng> carparkLocationsByName = new HashMap<>();
 
     private RTreeNode root;
 
@@ -155,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
     public void addCarparkToEvent(){
         RTreeNode temp;
         Event event;
-        int slots=0;
+        int slots;
         Location carparkLocation = new Location("");
         root.populateTree(carparkLocations);
         for (int i=0; i<eventList.size(); i++){
@@ -175,7 +177,7 @@ public class MainActivity extends AppCompatActivity {
                     event.addNearbyCarparks(carpark);
                     try{
                         slots += carparkSlots.get(carpark);
-                    } catch (NullPointerException e){
+                    } catch (NullPointerException e){ //carparks that don't have slots
                         e.printStackTrace();
                     }
                 }
@@ -262,8 +264,10 @@ public class MainActivity extends AppCompatActivity {
 
     private class  EventJsonTask extends AsyncTask<String, String, ArrayList<Event>> {
         private final String basicAuth = "Basic " + Base64.encodeToString("eventsaroundsingapore:p96k9gkrb6s8".getBytes(), Base64.NO_WRAP);
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+        ArrayList<Event> eventsTask;
 
-        protected Event createEvent(JSONArray events, int i, int imagePosition) throws JSONException{
+        protected Event createEvent(JSONArray events, int i, int imagePosition) throws JSONException, ParseException {
             JSONObject event;
             event = events.getJSONObject(i);
             String name = event.getString("name");
@@ -278,11 +282,35 @@ public class MainActivity extends AppCompatActivity {
             Event event1 = new Event(name, description, img);
             event1.setAddress(event.getString("address"));
             event1.setUrl(event.getString("url"));
-            event1.setDatetimeStart(event.getString("datetime_start"));
-            event1.setDatetimeEnd(event.getString("datetime_end"));
+            event1.setDatetimeStart(dateFormat.parse(event.getString("datetime_start")));
+            event1.setDatetimeEnd(dateFormat.parse(event.getString("datetime_end")));
             event1.setLat(event.getJSONObject("point").getDouble("lat"));
             event1.setLng(event.getJSONObject("point").getDouble("lng"));
             return event1;
+        }
+
+        protected void addEventByDate(Event event){
+            Log.d(TAG, "addEventByDate: adding event " + event.getName());
+            if (eventsTask.size() == 0){
+                eventsTask.add(event);
+                Log.d(TAG, "addEventByDate: list empty add at 0");
+            }
+            else {
+                if(event.getDatetimeStart().after(eventsTask.get(eventsTask.size()-1).getDatetimeStart())){
+                    eventsTask.add(event);
+                }
+                else{
+                    for (int i = eventsTask.size()-1; i>=0;i--){
+                        if(event.getDatetimeStart().after(eventsTask.get(i).getDatetimeStart())){
+                            eventsTask.add(i+1, event);
+                            Log.d(TAG, "addEventByDate: eventList " + eventsTask.size());
+                            return;
+                        }
+                    }
+                    eventsTask.add(0, event);
+                }
+            }
+            Log.d(TAG, "addEventByDate: eventList "+ eventsTask.size());
         }
 
         private static final String TAG = "EventJsonTask";
@@ -314,7 +342,7 @@ public class MainActivity extends AppCompatActivity {
 
                 Log.d(TAG, "doInBackground: read input success");
 
-                ArrayList<Event> eventsTask = new ArrayList<Event>();
+                eventsTask = new ArrayList<>();
                 JSONArray events = new JSONArray();
                 try {
                     JSONObject jsonObject = new JSONObject(buffer.toString());
@@ -327,19 +355,25 @@ public class MainActivity extends AppCompatActivity {
                 for (int i = 0; i < events.length(); i++) {
                     try {
                         event = createEvent(events, i , 3);
-                        eventsTask.add(event);
+                        addEventByDate(event);
                     } catch (JSONException e3){
                         try{
                             event = createEvent(events, i,2);
-                            eventsTask.add(event);
+                            addEventByDate(event);
                         } catch (JSONException e2){
                             try {
                                 event = createEvent(events, i, 1);
-                                eventsTask.add(event);
+                                addEventByDate(event);
                             }catch (JSONException e1){
                                 e1.printStackTrace();
+                            }catch (ParseException p1){
+                                p1.printStackTrace();
                             }
+                        } catch (ParseException p2){
+                            p2.printStackTrace();
                         }
+                    } catch (ParseException p3){
+                        p3.printStackTrace();
                     }
                 }
                 Log.d(TAG, "doInBackground: events task size: " + eventsTask.size());

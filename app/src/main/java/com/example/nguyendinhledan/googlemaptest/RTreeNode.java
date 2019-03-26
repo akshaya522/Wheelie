@@ -35,7 +35,7 @@ public class RTreeNode {
         botRightLat = BOT_RIGHT_LAT_SING;
         botRightLng = BOT_RIGHT_LNG_SING;
 
-        data = new ArrayList<String>();
+        data = new ArrayList<>();
     }
 
     public RTreeNode(double topLeftLat, double topLeftLng, double botRightLat, double botRightLng) {
@@ -44,7 +44,7 @@ public class RTreeNode {
         this.botRightLat = botRightLat;
         this.botRightLng = botRightLng;
 
-        data = new ArrayList<String>();
+        data = new ArrayList<>();
     }
 
     public double getTopLeftLat() {

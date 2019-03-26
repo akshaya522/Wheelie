@@ -43,6 +43,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.xmlpull.v1.XmlPullParserException;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -153,7 +154,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         Log.d(TAG, "onMapReady: Map is ready");
-        Toast.makeText(this, "Map is ready!", Toast.LENGTH_SHORT).show();
+
         mMap = googleMap;
         /*
         if (mLocationPermissionGranted) {
@@ -206,7 +207,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             super.onPreExecute();
             pd = new ProgressDialog(MapActivity.this);
             pd.setCancelable(true);
-            pd.setMessage("Wait");
+            pd.setMessage("Please wait");
             pd.show();
         }
 
@@ -222,8 +223,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                             .title(extras.getString("event_name"))
                             .snippet(extras.getString("event_address"))
                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
-            Log.d(TAG, "onPostExecute: creating carpark marker");
+            Log.d(TAG, "onPostExecute: creating carpark marker: " + extras.getInt("event_number_of_carpark"));
             for (int i=0; i<extras.getInt("event_number_of_carpark"); i++){
+                Log.d(TAG, "onPostExecute: creating marker " + i);
                 if (!extras.getString("event_carpark_type"+i).equals("HDB") || carparkSlots.get(extras.getString("event_carpark_name"+i)) == null){
                     mMap.addMarker(new MarkerOptions()
                             .position(new LatLng(extras.getDouble("event_carpark_lat"+i), extras.getDouble("event_carpark_lng"+i)))
@@ -288,7 +290,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 connection.connect();
                 Log.d(TAG, "doInBackground: establish connection");
 
-                InputStream stream = connection.getInputStream();
+                InputStream stream = new BufferedInputStream(connection.getInputStream());
 
                 reader = new BufferedReader(new InputStreamReader(stream));
 
@@ -306,7 +308,7 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                 JSONArray items = jsonObject.getJSONArray("items");
                 JSONObject item = items.getJSONObject(0);
                 JSONArray carpark_data = item.getJSONArray("carpark_data");
-                HashMap<String, Integer> slots = new HashMap<String, Integer>();
+                HashMap<String, Integer> slots = new HashMap<>();
                 for (int i = 0; i < carpark_data.length(); i++) {
                     JSONObject carpark = carpark_data.getJSONObject(i);
                     JSONArray info_array = carpark.getJSONArray("carpark_info");

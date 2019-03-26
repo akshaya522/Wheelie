@@ -3,6 +3,7 @@ package com.example.nguyendinhledan.googlemaptest;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Date;
 
 public class Event {
     private String name;
@@ -12,10 +13,10 @@ public class Event {
     private String address;
     private double lat;
     private double lng;
-    private String datetimeStart;
-    private String datetimeEnd;
+    private Date datetimeStart;
+    private Date datetimeEnd;
     private int slots;
-    private ArrayList<String> nearbyCarparks = new ArrayList<String>();
+    private ArrayList<String> nearbyCarparks = new ArrayList<>();
 
 
     public Event(String name, String description, String img) {
@@ -60,11 +61,11 @@ public class Event {
         this.slots = slots;
     }
 
-    public String getDatetimeStart() {
+    public Date getDatetimeStart() {
         return datetimeStart;
     }
 
-    public String getDatetimeEnd() {
+    public Date getDatetimeEnd() {
         return datetimeEnd;
     }
 
@@ -100,11 +101,11 @@ public class Event {
         this.lng = lng;
     }
 
-    public void setDatetimeStart(String datetimeStart) {
+    public void setDatetimeStart(Date datetimeStart) {
         this.datetimeStart = datetimeStart;
     }
 
-    public void setDatetimeEnd(String datetimeEnd) {
+    public void setDatetimeEnd(Date datetimeEnd) {
         this.datetimeEnd = datetimeEnd;
     }
 
@@ -122,5 +123,9 @@ public class Event {
 
     public boolean hasCarpark(String carpark){
         return nearbyCarparks.contains(carpark);
+    }
+
+    public int getNumberOfCarpark(){
+        return nearbyCarparks.size();
     }
 }
