@@ -1,5 +1,5 @@
 <resources>
-    <string name="google_map_API_key">AIzaSyBN1mVJMDK3RclC1teG3BkL4It0oeUgnUI</string>
+    <string name="google_map_API_key"></string>
 
     <string name="app_name">Wheelie</string>
 
