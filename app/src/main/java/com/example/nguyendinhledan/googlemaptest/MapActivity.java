@@ -16,6 +16,7 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -58,6 +59,8 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private boolean mLocationPermissionGranted = false;
     private FusedLocationProviderClient mFusedLocationProviderClient;
+
+    private Bundle extras;
 
     private static final String TAG = "MapActivity";
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1234;
@@ -170,6 +173,18 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
 
     }
 
+    public void initView(){
+        TextView name = (TextView) findViewById(R.id.map_event_name);
+        TextView description = (TextView) findViewById(R.id.map_event_description);
+        TextView location = (TextView) findViewById(R.id.map_event_location);
+        TextView address = (TextView) findViewById(R.id.map_event_address);
+
+        name.setText(extras.getString("event_name"));
+        description.setText(extras.getString("event_description"));
+        location.setText(extras.getString("event_location"));
+        address.setText(extras.getString("event_address"));
+    }
+
     private class MarkerTaskClass extends AsyncTask<Void, Void, JSONArray> {
         private static final String TAG = "MarkerTaskClass";
         ProgressDialog pd;
@@ -216,14 +231,20 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
             super.onPostExecute(carparks);
             mMap.setInfoWindowAdapter(new CustomInfoWindowAdapter(MapActivity.this));
             Log.d(TAG, "onPostExecute: creating markers");
-            Bundle extras = getIntent().getExtras();
+            extras = getIntent().getExtras();
+
+            //drawing event marker
             Log.d(TAG, "onPostExecute: creating event marker");
             mMap.addMarker(new MarkerOptions()
                             .position(new LatLng(extras.getDouble("event_lat"), extras.getDouble("event_lng")))
                             .title(extras.getString("event_name"))
-                            .snippet(extras.getString("event_address"))
+                            .snippet(extras.getString("event_location") + "\n"
+                                    + "Address: " + extras.getString("event_address"))
                             .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE)));
+
             Log.d(TAG, "onPostExecute: creating carpark marker: " + extras.getInt("event_number_of_carpark"));
+
+            //drawing carpark markers
             for (int i=0; i<extras.getInt("event_number_of_carpark"); i++){
                 Log.d(TAG, "onPostExecute: creating marker " + i);
                 if (!extras.getString("event_carpark_type"+i).equals("HDB") || carparkSlots.get(extras.getString("event_carpark_name"+i)) == null){
@@ -250,6 +271,9 @@ public class MapActivity extends AppCompatActivity implements OnMapReadyCallback
                     .strokeColor(Color.BLUE)
                     .strokeWidth(2f));
             moveCamera(new LatLng(extras.getDouble("event_lat"), extras.getDouble("event_lng")), DEFAULT_ZOOM);
+
+            initView();
+
             if (pd.isShowing()){
                 pd.dismiss();
             }

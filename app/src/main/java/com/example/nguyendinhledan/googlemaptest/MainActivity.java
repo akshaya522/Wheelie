@@ -10,12 +10,15 @@ import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Base64;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.Toast;
 import android.support.v7.widget.Toolbar;
@@ -69,7 +72,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        isServicesOK();
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
 
         Log.d(TAG, "onCreate: initiating r tree");
@@ -108,6 +111,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void initListView(){
+        //search bar
+        EditText filter = (EditText) findViewById(R.id.search_filter);
+
         Log.d(TAG, "initListView: adding carpark to event");
         addCarparkToEvent();
         Log.d(TAG, "initListView: initiating list view");
@@ -126,6 +132,8 @@ public class MainActivity extends AppCompatActivity {
                 intent.putExtra("event_lat", temp.getLat());
                 intent.putExtra("event_lng", temp.getLng());
                 intent.putExtra("event_address", temp.getAddress());
+                intent.putExtra("event_location", temp.getLocation());
+                intent.putExtra("event_description", temp.getDescription());
 
                 ArrayList<String> nearbyCarpark = temp.getNearbyCarparks();
                 intent.putExtra("event_number_of_carpark", nearbyCarpark.size());
@@ -151,6 +159,24 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
+
+        filter.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                Log.d(TAG, "onTextChanged: "+ s);
+                (MainActivity.this).adapter.getFilter().filter(s);
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+
+            }
+        });
         resume = true;
     }
 
@@ -158,6 +184,7 @@ public class MainActivity extends AppCompatActivity {
         RTreeNode temp;
         Event event;
         int slots;
+        LatLng carparkLatLng;
         Location carparkLocation = new Location("");
         root.populateTree(carparkLocations);
         for (int i=0; i<eventList.size(); i++){
@@ -168,7 +195,7 @@ public class MainActivity extends AppCompatActivity {
             temp = root.findNode(event.getLat(), event.getLng());
 
             for (String carpark : temp.getData()){
-                LatLng carparkLatLng = carparkLocationsByName.get(carpark);
+                carparkLatLng = carparkLocationsByName.get(carpark);
                 carparkLocation.setLongitude(carparkLatLng.longitude);
                 carparkLocation.setLatitude(carparkLatLng.latitude);
                 if (eventLocation.distanceTo(carparkLocation) < PreferenceManager.getDefaultSharedPreferences(this).
@@ -279,8 +306,9 @@ public class MainActivity extends AppCompatActivity {
                     .getJSONArray("transforms")
                     .getJSONObject(imagePosition)
                     .getString("url");
-            Event event1 = new Event(name, description, img);
-            event1.setAddress(event.getString("address"));
+            Event event1 = new Event(name, description + "\n", img);
+            event1.setAddress(event.getString("address") + "\n");
+            event1.setLocation(event.getString("location_summary") + "\n");
             event1.setUrl(event.getString("url"));
             event1.setDatetimeStart(dateFormat.parse(event.getString("datetime_start")));
             event1.setDatetimeEnd(dateFormat.parse(event.getString("datetime_end")));

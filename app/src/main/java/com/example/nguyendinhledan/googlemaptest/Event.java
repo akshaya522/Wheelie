@@ -11,6 +11,7 @@ public class Event {
     private String img;
     private String url;
     private String address;
+    private String location;
     private double lat;
     private double lng;
     private Date datetimeStart;
@@ -43,6 +44,10 @@ public class Event {
 
     public String getAddress() {
         return address;
+    }
+
+    public String getLocation() {
+        return location;
     }
 
     public double getLat() {
@@ -91,6 +96,10 @@ public class Event {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
     }
 
     public void setLat(double lat) {

@@ -8,6 +8,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.Filter;
+import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -26,15 +28,21 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 
-public class EventListAdapter extends ArrayAdapter<Event> {
+public class EventListAdapter extends ArrayAdapter<Event> implements Filterable {
     private static final String TAG = "EventListAdapter";
 
     private Context mContext;
     private int mResource;
+    private ArrayList<Event> filteredEvents;
+    private ArrayList<Event> oriEvents;
     private SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd hh:mm:ss");
+    private ItemFilter mFilter = new ItemFilter();
+    private final Object mLock = new Object();
 
     public EventListAdapter(Context context, int resource, ArrayList objects) {
         super(context, resource, objects);
+        filteredEvents = objects;
+        oriEvents = objects;
         mContext = context;
         mResource = resource;
     }
@@ -46,6 +54,28 @@ public class EventListAdapter extends ArrayAdapter<Event> {
         TextView slot;
         TextView carpark;
         TextView time;
+    }
+
+    public Event getItem(int position){
+        synchronized (mLock){
+            return filteredEvents.get(position);
+        }
+    }
+
+    public long getItemId(int position){
+        synchronized (mLock){
+            return position;
+        }
+    }
+
+    public int getCount(){
+        synchronized (mLock){
+            return filteredEvents!=null ? filteredEvents.size() : 0;
+        }
+    }
+
+    public Filter getFilter(){
+        return mFilter;
     }
 
     @NonNull
@@ -120,6 +150,53 @@ public class EventListAdapter extends ArrayAdapter<Event> {
         return convertView;
 
 
+    }
+
+    private class ItemFilter extends Filter{
+        @Override
+        protected FilterResults performFiltering(CharSequence constraint) {
+            String filterString = constraint.toString().toLowerCase();
+            Log.d(TAG, "performFiltering: filterstring " + filterString);
+
+            FilterResults results = new FilterResults();
+
+            final ArrayList<Event> list = oriEvents;
+
+            final ArrayList<Event> nList = new ArrayList<>();
+
+            String filterableString;
+
+            for (int i=0; i<list.size(); i++){
+                filterableString = oriEvents.get(i).getName();
+                Log.d(TAG, "performFiltering: filterablestring " + filterableString);
+                if (filterableString.toLowerCase().contains(filterString)) {
+                    Log.d(TAG, "performFiltering: adding " + filterableString);
+                    nList.add(oriEvents.get(i));
+                }
+            }
+
+            results.values = nList;
+            results.count = nList.size();
+
+            return results;
+        }
+
+        @Override
+        protected void publishResults(CharSequence constraint, FilterResults results) {
+            if (constraint == null || constraint.length() == 0){
+                synchronized (mLock){
+                    filteredEvents = oriEvents;
+                    notifyDataSetChanged();
+                }
+            }
+            if (results.count > 0 && results!= null){
+                filteredEvents = (ArrayList<Event>) results.values;
+                notifyDataSetChanged();
+            }
+            else {
+                notifyDataSetInvalidated();
+            }
+        }
     }
 
     private void setupImageLoader(){

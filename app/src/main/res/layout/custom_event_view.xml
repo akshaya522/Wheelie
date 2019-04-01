@@ -5,7 +5,9 @@
     android:layout_height="match_parent"
     android:orientation="horizontal"
     android:weightSum="100"
-    android:paddingTop="10px">
+    android:paddingTop="10dp"
+    android:dividerPadding="10dp"
+    android:background="@drawable/event_border">
 
     <RelativeLayout
         android:layout_width="wrap_content"
